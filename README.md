@@ -220,9 +220,20 @@ Ingredient nutrition values are approximate reference values per portion, so sal
 
 ## Deployment
 
-The app is deployed on **Vercel** and needs no configuration or environment variables.
+The app is deployed on **Vercel** and needs no configuration or environment variables. The GitHub repository is connected to the Vercel project, so deployments happen automatically:
 
-**Vercel CLI**
+| Event | Result |
+| --- | --- |
+| Merge (push) to `main` | **Production** deploy to https://bmi-wellness-tracker.vercel.app |
+| Push to any other branch / open a PR | **Preview** deploy with its own URL, posted on the PR |
+
+`main` is protected: direct pushes are blocked, so every change reaches production through a pull request.
+
+```
+feature branch ──► pull request (Preview deploy) ──► merge to main ──► Production deploy
+```
+
+**Manual deploy (Vercel CLI)**, e.g. for a hotfix or if the Git integration is disconnected:
 
 ```bash
 npx vercel login
@@ -230,7 +241,7 @@ npx vercel link            # first time only
 npx vercel deploy --prod
 ```
 
-**Automatic deploys from GitHub:** connect the repository in the Vercel dashboard (Project → Settings → Git), or run `npx vercel git connect`. Every push to `main` then deploys automatically. This requires your Vercel account to have a GitHub login connection (Account Settings → Authentication).
+If automatic deploys stop, check Project → Settings → Git in the Vercel dashboard, or reconnect with `npx vercel git connect` (your Vercel account needs a GitHub login connection under Account Settings → Authentication).
 
 ---
 
