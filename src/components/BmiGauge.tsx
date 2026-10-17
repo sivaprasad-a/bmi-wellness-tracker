@@ -33,9 +33,13 @@ const START = 200; // degrees, counter-clockwise from +x
 const SWEEP = 220;
 const SEGMENTS = 72;
 
+// Rounded so server and browser produce identical SVG paths (trig results can differ in the
+// last floating-point digits between Node and the browser, causing a hydration mismatch).
+const r2 = (n: number) => Math.round(n * 100) / 100;
+
 const point = (deg: number, r = R) => {
   const rad = (deg * Math.PI) / 180;
-  return { x: CX + r * Math.cos(rad), y: CY - r * Math.sin(rad) };
+  return { x: r2(CX + r * Math.cos(rad)), y: r2(CY - r * Math.sin(rad)) };
 };
 
 interface Props {

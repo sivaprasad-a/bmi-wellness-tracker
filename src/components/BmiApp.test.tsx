@@ -40,6 +40,42 @@ describe('BmiApp', () => {
     expect(screen.getByText(/gradual weight loss/)).toBeInTheDocument();
   });
 
+  it('only accepts digits in numeric fields, which are text inputs', async () => {
+    const { user } = setup();
+    const weight = screen.getByLabelText('Weight in kilograms');
+    expect(weight).toHaveAttribute('type', 'text');
+    expect(weight).toHaveAttribute('inputmode', 'decimal');
+
+    await user.clear(weight);
+    await user.type(weight, '7a2-.5e9');
+    expect(weight).toHaveValue('72.5'); // letters, minus and a second decimal digit are rejected
+
+    const age = screen.getByLabelText('Age in years');
+    await user.clear(age);
+    await user.type(age, '3.5x');
+    expect(age).toHaveValue('35'); // integers only
+
+    const height = screen.getByLabelText('Height in centimeters');
+    await user.clear(height);
+    await user.type(height, '17000');
+    expect(height).toHaveValue('170'); // max three digits
+  });
+
+  it('gives visible feedback on every Calculate click, even with unchanged values', async () => {
+    const { user } = setup();
+    const button = screen.getByRole('button', { name: /calculate bmi/i });
+    expect(button).toBeEnabled();
+
+    await user.click(button);
+    expect(await screen.findByText('BMI updated: 17.3 (Underweight)')).toBeInTheDocument();
+    const firstFlash = screen.getByTestId('result-flash');
+
+    await user.click(button);
+    expect(screen.getByText('BMI updated: 17.3 (Underweight)')).toBeInTheDocument();
+    // The result card is re-mounted to replay the highlight animation
+    expect(screen.getByTestId('result-flash')).not.toBe(firstFlash);
+  });
+
   it('shows validation errors for invalid input', async () => {
     const { user } = setup();
     await user.clear(screen.getByLabelText('Height in centimeters'));
@@ -51,9 +87,9 @@ describe('BmiApp', () => {
   it('converts values when switching to imperial units', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('button', { name: 'Imperial (lb, ft)' }));
-    expect(screen.getByLabelText('Height in feet')).toHaveValue(5);
-    expect(screen.getByLabelText('Height in inches')).toHaveValue(7);
-    expect(screen.getByLabelText('Weight in pounds')).toHaveValue(110.2);
+    expect(screen.getByLabelText('Height in feet')).toHaveValue('5');
+    expect(screen.getByLabelText('Height in inches')).toHaveValue('7');
+    expect(screen.getByLabelText('Weight in pounds')).toHaveValue('110.2');
   });
 
   it('switches wellness plan tabs and opens details', async () => {
@@ -134,6 +170,15 @@ describe('BmiApp', () => {
     await user.click(screen.getByRole('button', { name: /download pdf/i }));
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
     expect(downloadBmiReport).not.toHaveBeenCalled();
+  });
+
+  it('promotes the salad builder under the report and shares the result with it', () => {
+    localStorage.clear();
+    setup();
+    const promo = screen.getByRole('region', { name: 'Try our salad prep' });
+    expect(within(promo).getByRole('link', { name: /build my salad/i })).toHaveAttribute('href', '/salad');
+    expect(within(promo).getByText(/about 720 kcal per meal/)).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem('bmi-wellness:last-result')!).bmi).toBe(17.3);
   });
 
   it('opens WhatsApp with the share text', async () => {

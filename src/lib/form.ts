@@ -29,6 +29,18 @@ export const DEFAULT_VALUES: FormValues = {
 
 const num = (s: string): number => (s.trim() === '' ? NaN : Number(s));
 
+export type NumericKind = 'decimal' | 'integer';
+
+/**
+ * Whether a partially typed value is allowed in a numeric text field:
+ * digits only, up to `maxDigits` before the point, and (for decimals) one decimal place.
+ * Empty is allowed so the field can be cleared.
+ */
+export function isNumericInput(value: string, kind: NumericKind, maxDigits = 3): boolean {
+  const pattern = kind === 'decimal' ? new RegExp(`^\\d{0,${maxDigits}}(\\.\\d?)?$`) : new RegExp(`^\\d{0,${maxDigits}}$`);
+  return pattern.test(value);
+}
+
 export const normalizeName = (raw: string): string => raw.trim().replace(/\s+/g, ' ');
 
 /** Returns an error message for an invalid (already normalized) name, or undefined if valid. */

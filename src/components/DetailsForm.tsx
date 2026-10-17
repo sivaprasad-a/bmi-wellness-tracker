@@ -16,7 +16,15 @@ import CalculateOutlinedIcon from '@mui/icons-material/CalculateOutlined';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { BmiInput, Gender, UnitSystem } from '@/lib/bmi';
-import { NAME_MAX_LENGTH, parseForm, switchUnits, type FormErrors, type FormValues } from '@/lib/form';
+import {
+  NAME_MAX_LENGTH,
+  isNumericInput,
+  parseForm,
+  switchUnits,
+  type FormErrors,
+  type FormValues,
+  type NumericKind,
+} from '@/lib/form';
 import { BRAND } from '@/theme';
 import SectionHeader from './SectionHeader';
 
@@ -47,14 +55,7 @@ const unitAdornment = (label: string) => ({
 });
 
 const fieldLabelSx = { fontWeight: 600, fontSize: 15.5, mb: 1, display: 'block' } as const;
-const inputSx = {
-  '& .MuiOutlinedInput-input': { fontSize: 17, py: 1.75 },
-  '& input[type=number]': { MozAppearance: 'textfield' },
-  '& input[type=number]::-webkit-outer-spin-button, & input[type=number]::-webkit-inner-spin-button': {
-    WebkitAppearance: 'none',
-    margin: 0,
-  },
-} as const;
+const inputSx = { '& .MuiOutlinedInput-input': { fontSize: 17, py: 1.75 } } as const;
 
 interface Props {
   initialValues: FormValues;
@@ -72,8 +73,20 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
   const [errors, setErrors] = useState<FormErrors>({});
   const [showOptional, setShowOptional] = useState(true);
 
+  // The button stays disabled until hydration so an early click can't trigger a native form reload.
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
+
   const set = (patch: Partial<FormValues>) => setValues((v) => ({ ...v, ...patch }));
   const numericProps = { inputMode: 'decimal' as const };
+
+  /** onChange handler that only accepts digits (and one decimal place for decimals). */
+  const numeric =
+    (field: 'heightCm' | 'heightFt' | 'heightIn' | 'weight' | 'age', kind: NumericKind, maxDigits = 3) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value.replace(',', '.');
+      if (isNumericInput(value, kind, maxDigits)) set({ [field]: value });
+    };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -154,9 +167,9 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
           <TextField
             id="height-cm"
             fullWidth
-            type="number"
+            type="text"
             value={values.heightCm}
-            onChange={(e) => set({ heightCm: e.target.value })}
+            onChange={numeric('heightCm', 'decimal')}
             error={!!errors.height}
             helperText={errors.height}
             sx={inputSx}
@@ -167,9 +180,9 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
             <TextField
               id="height-ft"
               fullWidth
-              type="number"
+              type="text"
               value={values.heightFt}
-              onChange={(e) => set({ heightFt: e.target.value })}
+              onChange={numeric('heightFt', 'integer', 1)}
               error={!!errors.height}
               helperText={errors.height}
               sx={inputSx}
@@ -177,9 +190,9 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
             />
             <TextField
               fullWidth
-              type="number"
+              type="text"
               value={values.heightIn}
-              onChange={(e) => set({ heightIn: e.target.value })}
+              onChange={numeric('heightIn', 'integer', 2)}
               error={!!errors.height}
               sx={inputSx}
               slotProps={{ input: unitAdornment('in'), htmlInput: { inputMode: 'numeric', 'aria-label': 'Height in inches' } }}
@@ -195,9 +208,9 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
         <TextField
           id="weight"
           fullWidth
-          type="number"
+          type="text"
           value={values.weight}
-          onChange={(e) => set({ weight: e.target.value })}
+          onChange={numeric('weight', 'decimal', values.units === 'metric' ? 3 : 4)}
           error={!!errors.weight}
           helperText={errors.weight}
           sx={inputSx}
@@ -230,9 +243,9 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
           <TextField
             id="age"
             fullWidth
-            type="number"
+            type="text"
             value={values.age}
-            onChange={(e) => set({ age: e.target.value })}
+            onChange={numeric('age', 'integer')}
             error={!!errors.age}
             helperText={errors.age}
             sx={inputSx}
@@ -261,6 +274,7 @@ export default function DetailsForm({ initialValues, name, onCalculate }: Props)
 
       <Button
         type="submit"
+        disabled={!ready}
         fullWidth
         variant="contained"
         size="large"
