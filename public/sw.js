@@ -1,7 +1,7 @@
 /* BMI & Wellness Tracker service worker */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `bmi-cache-${VERSION}`;
-const PRECACHE = ['/', '/manifest.webmanifest', '/icons/192', '/icons/512'];
+const PRECACHE = ['/', '/salad', '/manifest.webmanifest', '/icons/192', '/icons/512'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

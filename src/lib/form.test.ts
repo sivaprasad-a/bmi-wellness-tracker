@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_VALUES, parseForm, switchUnits, validateName, type FormValues } from './form';
+import { DEFAULT_VALUES, isNumericInput, parseForm, switchUnits, validateName, type FormValues } from './form';
 
 const metric = (patch: Partial<FormValues> = {}): FormValues => ({ ...DEFAULT_VALUES, ...patch });
 
@@ -44,6 +44,30 @@ describe('parseForm', () => {
   it('rejects inches of 12 or more', () => {
     const { errors } = parseForm(metric({ units: 'imperial', heightFt: '5', heightIn: '12' }));
     expect(errors.height).toBeDefined();
+  });
+});
+
+describe('isNumericInput', () => {
+  it.each([
+    ['', 'decimal', true],
+    ['170', 'decimal', true],
+    ['72.', 'decimal', true],
+    ['72.5', 'decimal', true],
+    ['72.55', 'decimal', false],
+    ['1700', 'decimal', false],
+    ['7a', 'decimal', false],
+    ['-5', 'decimal', false],
+    ['1.2.3', 'decimal', false],
+    [' 5', 'decimal', false],
+    ['28', 'integer', true],
+    ['2.8', 'integer', false],
+  ] as const)('%j as %s → %s', (value, kind, ok) => {
+    expect(isNumericInput(value, kind)).toBe(ok);
+  });
+
+  it('respects a custom digit limit', () => {
+    expect(isNumericInput('1100', 'decimal', 4)).toBe(true);
+    expect(isNumericInput('12', 'integer', 1)).toBe(false);
   });
 });
 
